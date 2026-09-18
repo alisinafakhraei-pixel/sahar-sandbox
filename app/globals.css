@@ -5,8 +5,21 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
+    --font-heading: var(--font-display);
+    --font-display: var(--font-display);
     --font-sans: var(--font-sans);
+
+    /* Formaloo OI brand */
+    --color-brand-red: var(--brand-red);
+    --color-brand-mid: var(--brand-mid);
+    --color-brand-orange: var(--brand-orange);
+    --color-ink: var(--ink);
+    --color-ink-deep: var(--ink-deep);
+    --color-canvas: var(--canvas);
+    --color-chat-surface: var(--chat-surface);
+    --color-chat-user: var(--chat-user);
+    --color-chat-user-foreground: var(--chat-user-foreground);
+
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,85 +61,322 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    /* --- Formaloo OI brand, from the logo lockups --- */
+    --brand-red: #f5423c;
+    --brand-mid: #fa5733;
+    --brand-orange: #ff7a2e;
+
+    /* Neutral near-blacks (Linear-derived). --ink is the working black used
+       for CTAs and the wordmark; --ink-deep is the darkest canvas. Both are
+       live-editable from the theme lab, so keep them as the single source. */
+    --ink: #1f2023;
+    --ink-deep: #19191c;
+    --canvas: #faf9f5;
+
+    --background: var(--canvas);
+    --foreground: var(--ink);
+    --card: #ffffff;
+    --card-foreground: var(--ink);
+    --popover: #ffffff;
+    --popover-foreground: var(--ink);
+
+    --primary: var(--ink);
+    --primary-foreground: #fbfbfa;
+
+    --secondary: #f1efea;
+    --secondary-foreground: var(--ink);
+    --muted: #f1efea;
+    --muted-foreground: #74716b;
+    --accent: oklch(0.96 0.02 45);
+    --accent-foreground: oklch(0.42 0.16 32);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --border: #e7e4de;
+    --input: #e7e4de;
+    --ring: var(--brand-mid);
+
+    /* Chat surfaces: the user bubble is the working black, the assistant sits
+       on a barely-tinted surface so a long reply is not a wall of white. */
+    --chat-surface: #f6f4f0;
+    --chat-user: var(--ink);
+    --chat-user-foreground: #fbfbfa;
+
+    --chart-1: var(--brand-red);
+    --chart-2: var(--brand-mid);
+    --chart-3: var(--brand-orange);
+    --chart-4: oklch(0.6 0.1 50);
+    --chart-5: oklch(0.45 0.05 60);
+    --radius: 0.75rem;
+    --sidebar: #ffffff;
+    --sidebar-foreground: var(--ink);
+    --sidebar-primary: var(--ink);
+    --sidebar-primary-foreground: #fbfbfa;
+    --sidebar-accent: #f1efea;
+    --sidebar-accent-foreground: var(--ink);
+    --sidebar-border: #e7e4de;
+    --sidebar-ring: var(--brand-mid);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --brand-red: #f5423c;
+    --brand-mid: #fa5733;
+    --brand-orange: #ff7a2e;
+
+    --ink: #1f2023;
+    --ink-deep: #19191c;
+    --canvas: var(--ink-deep);
+
+    --background: var(--ink-deep);
+    --foreground: #ececef;
+    --card: var(--ink);
+    --card-foreground: #ececef;
+    --popover: var(--ink);
+    --popover-foreground: #ececef;
+
+    --primary: #ececef;
+    --primary-foreground: var(--ink-deep);
+
+    --secondary: #26272b;
+    --secondary-foreground: #ececef;
+    --muted: #26272b;
+    --muted-foreground: #8a8a93;
+    --accent: #32241d;
+    --accent-foreground: #ffb694;
     --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --border: #2a2b30;
+    --input: #2a2b30;
+    --ring: var(--brand-mid);
+
+    --chat-surface: var(--ink);
+    --chat-user: #2c2d32;
+    --chat-user-foreground: #ececef;
+
+    --chart-1: var(--brand-red);
+    --chart-2: var(--brand-mid);
+    --chart-3: var(--brand-orange);
+    --chart-4: oklch(0.6 0.1 50);
+    --chart-5: oklch(0.75 0.05 60);
+    --sidebar: var(--ink);
+    --sidebar-foreground: #ececef;
+    --sidebar-primary: #ececef;
+    --sidebar-primary-foreground: var(--ink-deep);
+    --sidebar-accent: #26272b;
+    --sidebar-accent-foreground: #ececef;
+    --sidebar-border: #2a2b30;
+    --sidebar-ring: var(--brand-mid);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
   body {
     @apply bg-background text-foreground;
-    }
+  }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
-    }
+  }
   html {
     @apply font-sans;
-    }
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display), var(--font-sans);
+    letter-spacing: -0.03em;
+  }
+}
+
+@utility text-brand-gradient {
+  background-image: linear-gradient(
+    100deg,
+    var(--brand-red) 0%,
+    var(--brand-mid) 55%,
+    var(--brand-orange) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/*
+ * Hero wash. Three offset radial lobes in the brand ramp over the canvas,
+ * so the colour reads as light rather than as a flat orange block.
+ */
+@utility hero-wash {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(62% 58% at 2% 82%, color-mix(in oklab, var(--brand-red) 95%, transparent) 0%, transparent 78%),
+    radial-gradient(60% 56% at 98% 88%, color-mix(in oklab, var(--brand-orange) 95%, transparent) 0%, transparent 78%),
+    radial-gradient(95% 52% at 50% 104%, var(--brand-mid) 0%, transparent 76%),
+    radial-gradient(48% 40% at 28% 96%, color-mix(in oklab, var(--brand-red) 85%, transparent) 0%, transparent 76%);
+}
+
+
+/* ==========================================================================
+   Motion: the mark
+
+   The Formaloo mark is a disc with a rounded bar inside it, read as an eye
+   where the bar is the pupil. It is meant to feel like a small, alive
+   creature rather than a static logo:
+
+   - idle:     breathes gently and blinks on its own, with an occasional
+               quick double-blink for personality. `--blink-offset` (a
+               negative animation-delay, set per instance from React) keeps
+               several idle marks from blinking in lockstep.
+   - hover:    perks up. Root cause of "pet" over "icon".
+   - thinking: the pupil scans while the whole mark nods, faster and
+               snappier than the idle loop so it reads as active work.
+   - done:     one happy hop-and-squash when a reply lands, then it settles
+               back to idle.
+   ========================================================================== */
+
+.logo-mark-group {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-delay: var(--blink-offset, 0s);
+}
+
+.logo-pupil {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-delay: var(--blink-offset, 0s);
+}
+
+/* Idle: slow breathing scale on the whole mark. */
+@keyframes mark-breathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50%      { transform: scale(1.025) translateY(-1.5%); }
+}
+
+/* Idle: mostly-open eye with a natural double-blink near the top of the loop,
+   then a long calm hold, like a creature that just checked in on you. */
+@keyframes eye-blink {
+  0%, 40%, 100% { transform: scaleY(1); }
+  42%           { transform: scaleY(0.05); }
+  45%           { transform: scaleY(1.08); }
+  47%           { transform: scaleY(1); }
+  49%           { transform: scaleY(0.05); }
+  52%           { transform: scaleY(1); }
+}
+
+/* Hover: perks up and gives a little wiggle, like it noticed you. */
+@keyframes mark-perk {
+  0%   { transform: scale(1) rotate(0deg); }
+  30%  { transform: scale(1.1) rotate(-6deg); }
+  60%  { transform: scale(1.08) rotate(5deg); }
+  100% { transform: scale(1.06) rotate(0deg); }
+}
+
+@keyframes eye-look {
+  0%, 100% { transform: scaleY(1) translateX(0); }
+  50%      { transform: scaleY(0.9) translateX(6%); }
+}
+
+/* Thinking: pupil scans side to side while the mark nods along, quick and
+   energetic so it reads as "working", not "idle but bigger". */
+@keyframes eye-think {
+  0%   { transform: translateX(0) scaleY(1) scaleX(1); }
+  20%  { transform: translateX(-22%) scaleY(0.85) scaleX(1.1); }
+  50%  { transform: translateX(24%) scaleY(1.05) scaleX(0.92); }
+  80%  { transform: translateX(-12%) scaleY(0.92) scaleX(1.05); }
+  100% { transform: translateX(0) scaleY(1) scaleX(1); }
+}
+
+@keyframes mark-nod {
+  0%, 100% { transform: scale(1) translateY(0) rotate(0deg); }
+  25%      { transform: scale(1.035) translateY(-4%) rotate(-2deg); }
+  50%      { transform: scale(0.985) translateY(2%) rotate(0deg); }
+  75%      { transform: scale(1.02) translateY(-2%) rotate(2deg); }
+}
+
+/* Done: a happy hop with a squash-and-stretch beat on landing. */
+@keyframes mark-hop {
+  0%   { transform: scale(1) translateY(0); }
+  30%  { transform: scale(1.05, 0.94) translateY(-18%); }
+  55%  { transform: scale(0.95, 1.08) translateY(4%); }
+  75%  { transform: scale(1.03, 0.98) translateY(-3%); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes eye-done {
+  0%   { transform: scaleY(1) scaleX(1); }
+  30%  { transform: scaleY(0.2) scaleX(1.25); }
+  55%  { transform: scaleY(1.22) scaleX(0.88); }
+  78%  { transform: scaleY(0.94) scaleX(1.04); }
+  100% { transform: scaleY(1) scaleX(1); }
+}
+
+.logo-idle .logo-mark-group  { animation: mark-breathe 4.2s ease-in-out infinite; }
+.logo-idle .logo-pupil       { animation: eye-blink 5s ease-in-out infinite; }
+.logo-idle:hover .logo-mark-group,
+.logo-idle:focus-visible .logo-mark-group {
+  animation: mark-perk 0.55s cubic-bezier(.34,1.56,.64,1) 1;
+}
+.logo-idle:hover .logo-pupil,
+.logo-idle:focus-visible .logo-pupil {
+  animation: eye-look 0.55s ease-in-out 1;
+}
+
+.logo-think .logo-mark-group { animation: mark-nod 1.1s ease-in-out infinite; }
+.logo-think .logo-pupil      { animation: eye-think 1.1s cubic-bezier(.45,.05,.3,1) infinite; }
+
+.logo-done .logo-mark-group  { animation: mark-hop 0.65s cubic-bezier(.34,1.56,.64,1) 1; }
+.logo-done .logo-pupil       { animation: eye-done 0.65s cubic-bezier(.34,1.56,.64,1) 1; }
+
+/* --- page + chat transitions --- */
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rise-in-sm {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hero-settle {
+  from { opacity: 0; transform: translateY(20px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes thinking-dot {
+  0%, 80%, 100% { transform: translateY(0) scale(0.85); opacity: 0.45; }
+  40%           { transform: translateY(-4px) scale(1); opacity: 1; }
+}
+
+@keyframes caret-blink {
+  0%, 70%, 100% { opacity: 1; }
+  20%, 50%      { opacity: 0; }
+}
+
+@utility animate-rise-in {
+  animation: rise-in 0.42s cubic-bezier(.22,1,.36,1) both;
+}
+
+@utility animate-rise-in-sm {
+  animation: rise-in-sm 0.3s cubic-bezier(.22,1,.36,1) both;
+}
+
+@utility animate-hero-settle {
+  animation: hero-settle 0.6s cubic-bezier(.22,1,.36,1) both;
+}
+
+@utility animate-fade-in {
+  animation: fade-in 0.35s ease both;
+}
+
+/* Honour the OS setting: everything collapses to an instant state change. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
