@@ -27,7 +27,7 @@ const fontMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Formaloo OI: describe the process. We'll build it.",
+  title: "Formaloo",
   description:
     "Tell Formaloo OI what you want to fix in your workflow. Get a straight answer on how to build it, or hand it to the team that will.",
 }
