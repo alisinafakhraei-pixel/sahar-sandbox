@@ -35,15 +35,27 @@ function cta(
   return `\n\n<<<CTA {"path":"${path}","action":"${action}","label":"${label}","href":"${href}"} >>>`
 }
 
-export function demoReply(message: string): string {
+/**
+ * `isFollowUp`: whether this is at least the visitor's second message.
+ * Path B qualifies first and routes second: the CTA is withheld on the
+ * first Path B turn (question only) and only shown once qualifying is
+ * assumed done, matching the live model's multi-turn behaviour.
+ */
+export function demoReply(message: string, isFollowUp: boolean): string {
   const text = message.toLowerCase()
 
   if (PATH_B_SIGNALS.some((s) => text.includes(s))) {
+    if (!isFollowUp) {
+      return (
+        "That's a system with more than one role in it, so it goes to our " +
+        "team rather than self-serve.\n\n" +
+        "Quick question so we point you at the right person: roughly how " +
+        "many people would be using this day to day?"
+      )
+    }
     return (
-      "That's a system with more than one role in it, so it goes to our team " +
-      "rather than self-serve.\n\n" +
-      "Quick question so we point you at the right person: roughly how many " +
-      "people would be using this day to day?" +
+      "Got it, that's enough to point you the right way.\n\n" +
+      "Our team builds this kind of thing directly with you." +
       cta("complex", "demo", "Book a demo", LINKS.demo)
     )
   }

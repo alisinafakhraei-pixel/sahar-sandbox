@@ -90,7 +90,8 @@ export async function POST(req: NextRequest) {
   // No key configured: serve the scripted stand-in so the flow stays
   // reviewable. The client surfaces a banner whenever this header is set.
   if (!apiKey) {
-    const reply = demoReply(turns.at(-1)!.text)
+    const isFollowUp = turns.filter((t) => t.role === "user").length > 1
+    const reply = demoReply(turns.at(-1)!.text, isFollowUp)
     return new Response(textStream(chunk(reply)), {
       headers: {
         "content-type": "text/plain; charset=utf-8",
@@ -138,7 +139,8 @@ export async function POST(req: NextRequest) {
       `[chat] Gemini ${upstream.status}: ${detail.slice(0, 400)}`
     )
     // Fall back rather than showing a dead box to a homepage visitor.
-    const reply = demoReply(turns.at(-1)!.text)
+    const isFollowUp = turns.filter((t) => t.role === "user").length > 1
+    const reply = demoReply(turns.at(-1)!.text, isFollowUp)
     return new Response(textStream(chunk(reply)), {
       headers: {
         "content-type": "text/plain; charset=utf-8",
