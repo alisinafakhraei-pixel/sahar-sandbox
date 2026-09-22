@@ -5,7 +5,7 @@ import { demoReply } from "@/lib/demo-reply"
 
 export const runtime = "nodejs"
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash"
+const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest"
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 
 const MAX_TURNS = 12
@@ -118,7 +118,12 @@ export async function POST(req: NextRequest) {
           })),
           generationConfig: {
             temperature: 0.6,
-            maxOutputTokens: 700,
+            maxOutputTokens: 900,
+            // The 3.x flash models "think" by default, spending part of
+            // maxOutputTokens on hidden reasoning before any visible text,
+            // which was silently truncating replies. This assistant only
+            // needs a short, direct answer, so thinking is switched off.
+            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
       }

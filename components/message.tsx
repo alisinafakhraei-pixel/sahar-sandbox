@@ -10,11 +10,15 @@ import { cn } from "@/lib/utils"
 /**
  * Minimal inline formatter. The model is told to answer in short prose and
  * numbered steps, so a full markdown dependency would be overkill. This covers
- * **bold** and bare URLs and leaves everything else as text.
+ * **bold**, markdown links `[label](url)`, and bare URLs, leaving everything
+ * else as text. The live model writes markdown links fairly often even though
+ * the system prompt asks for plain prose, so that case has to be handled
+ * rather than left to degrade into literal bracket text.
  */
 function formatInline(text: string, keyPrefix: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = []
-  const pattern = /(\*\*[^*]+\*\*)|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?])/g
+  const pattern =
+    /(\*\*[^*]+\*\*)|(\[[^\]]+\]\(https?:\/\/[^\s()]+\))|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?])/g
   let last = 0
   let match: RegExpExecArray | null
   let i = 0
@@ -29,13 +33,26 @@ function formatInline(text: string, keyPrefix: string): React.ReactNode[] {
         </strong>
       )
     } else if (match[2]) {
+      const linkMatch = /^\[([^\]]+)\]\((https?:\/\/[^\s()]+)\)$/.exec(match[2])
+      if (linkMatch) {
+        nodes.push(
+          <a
+            key={`${keyPrefix}-a${i}`}
+            href={linkMatch[2]}
+            className="font-medium text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
+          >
+            {linkMatch[1]}
+          </a>
+        )
+      }
+    } else if (match[3]) {
       nodes.push(
         <a
           key={`${keyPrefix}-a${i}`}
-          href={match[2]}
+          href={match[3]}
           className="font-medium text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
         >
-          {match[2].replace(/^https?:\/\/(www\.)?/, "")}
+          {match[3].replace(/^https?:\/\/(www\.)?/, "")}
         </a>
       )
     }
