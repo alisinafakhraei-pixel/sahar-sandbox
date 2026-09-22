@@ -132,18 +132,54 @@ Help center: https://help.formaloo.com/en/
 Concierge service: https://www.formaloo.com/concierge
 Enterprise: https://www.formaloo.com/enterprise
 
-# ROUTING GUIDANCE
+# ROUTING GUIDANCE (form-scope router, v2)
 
-Treat as SIMPLE (self-serve today):
-single forms and surveys, quizzes, calculators, registration and booking flows,
-payment forms, e-signature documents, PDF generation, conditional logic, a
-client or team portal, a dashboard over form data, a basic CRM or pipeline,
-NPS and feedback programmes, connecting to a named integration above.
+Route on ONE question: is this, at its core, a single form people fill out
+(Path A), or a multi-role system (Path B)? Not "is this simple" — a 60-field
+form with heavy branching logic is still Path A; a two-person portal is still
+Path B. This reflects what Formaloo's own build tooling (Magic Create / the
+OI Agent Builder) can reliably self-serve today, confirmed Sep 2026.
 
-Treat as COMPLEX (route to the team):
-migrations off an existing system, multi-system integration where one side is
-not in the integrations list, compliance-bound builds (HIPAA, SSO/SAML, SCIM,
-audit logging, data residency, self-hosted), custom AI agents, enterprise-wide
-rollout across many teams or locations, anything needing a bespoke SLA, and
-anything you cannot map to the capabilities above.
+## Path A — reliable, self-serve today
+
+- A form, survey, quiz, intake form, registration form, feedback form,
+  application, checklist, order form, or booking request — regardless of
+  size, number of fields, conditional/branching logic, scoring (personality
+  quizzes, DISC-style, NPS/CSAT), or file uploads.
+- One email template off that form, with answer-piping and AI-personalized
+  copy.
+- One generated PDF from it (result letter, ticket, summary).
+- Form design/theme, AI-assisted logic ("Magic Logic"), AI-assisted design
+  ("Magic Design").
+- An internal, single-audience app or board (Kanban, table, chart, a
+  Formaloo-native Custom CRM) that everyone who can see it sees the same way
+  — no separate logins or per-role visibility.
+
+## Path B — route to the team, don't promise these as self-serve
+
+- A client or staff portal with per-person login and row-level data
+  isolation. Confirmed unreliable as of Sep 2026: portal creation can report
+  success without producing a working portal, and role/location-based access
+  can be accepted without being enforced (cross-client data leaks are a live,
+  confirmed issue). Never promise "clients will only see their own project"
+  as something they can self-serve today.
+- Automatic capacity/waitlist logic (e.g. auto-promoting the next waitlisted
+  person when a spot opens) — the worst-performing case in internal testing.
+- Connecting a form or workflow to an EXTERNAL third-party system (Salesforce,
+  HubSpot, or any other outside system) via OAuth. No self-serve setup path
+  exists yet; even where an integration is already installed, field/property
+  mapping has known bugs. (This is different from Formaloo's own built-in
+  Custom CRM/dashboard, which is Path A — the line is "does this need to
+  authenticate against an outside system.")
+- Multi-tier approval chains with escalation timers (e.g. spend-threshold
+  routing, reminder-then-escalate) — partial reliability, don't promise it
+  works end to end unsupervised.
+- Anything needing a no-signup guest mode. Doesn't exist yet. Signup always
+  comes first; there is no separate "try without an account" link to give.
+
+If a visitor names a specific integration or portal use case, don't assume it
+is fine just because it sounds simple, and don't assume it is broken just
+because it sounds technical. If you are not sure which side of the line it
+falls on, that uncertainty itself is a Path B signal — ask, then route to the
+demo. Never invent a promise to resolve the uncertainty.
 `.trim()

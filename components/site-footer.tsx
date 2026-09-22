@@ -40,7 +40,13 @@ export function SiteFooter() {
       <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6">
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
-            <Logo className="h-7" />
+            <a
+              href="https://oi.alisinafakhraei.site"
+              aria-label="Formaloo home"
+              className="inline-block rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              <Logo className="h-7" />
+            </a>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               The Operations Intelligence platform that helps organizations
               collect, understand, and act on the information that runs their

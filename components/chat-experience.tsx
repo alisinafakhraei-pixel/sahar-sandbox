@@ -8,30 +8,6 @@ import { PromptBox } from "@/components/prompt-box"
 import { parseCta } from "@/lib/parse-cta"
 import { cn } from "@/lib/utils"
 
-// Short label on the chip, fuller prompt sent to the model.
-const SUGGESTIONS = [
-  {
-    label: "Patient intake",
-    prompt:
-      "I want patients to complete their intake before they arrive instead of on a clipboard in the waiting room.",
-  },
-  {
-    label: "Client onboarding",
-    prompt:
-      "I need a branded client onboarding flow with a brief, a contract to sign, and a portal they can log back into.",
-  },
-  {
-    label: "Purchase approvals",
-    prompt:
-      "Purchase requests over 5k need to route to two approvers and then generate a PDF for finance.",
-  },
-  {
-    label: "Replace our spreadsheets",
-    prompt:
-      "We run operations across about 40 spreadsheets and I want one dashboard the whole team can actually trust.",
-  },
-]
-
 let idCounter = 0
 const nextId = () => `m${++idCounter}`
 
@@ -226,29 +202,9 @@ export function ChatExperience() {
           />
 
           {!started && (
-            <ul className="mt-5 flex flex-wrap justify-center gap-2">
-              {SUGGESTIONS.map((suggestion, index) => (
-                <li
-                  key={suggestion.label}
-                  className="animate-rise-in-sm"
-                  style={{ animationDelay: `${240 + index * 60}ms` }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => send(suggestion.prompt)}
-                    className="rounded-full border border-black/5 bg-card/80 px-3.5 py-2 text-[0.8rem] font-medium text-foreground/75 shadow-sm backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:text-foreground hover:shadow-md dark:border-white/10"
-                  >
-                    {suggestion.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {!started && (
             <dl
               className="animate-fade-in mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-center"
-              style={{ animationDelay: "480ms" }}
+              style={{ animationDelay: "260ms" }}
             >
               {[
                 ["35K+", "teams worldwide"],

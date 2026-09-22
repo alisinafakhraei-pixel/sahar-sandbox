@@ -7,17 +7,23 @@ import { LINKS } from "./knowledge"
  * so nobody mistakes it for the real model.
  */
 
-const COMPLEX_SIGNALS = [
-  "migrate", "migration", "hipaa", "sso", "saml", "scim", "audit",
+// Path B: multi-role systems Formaloo's build tooling doesn't reliably
+// self-serve yet (portals, external OAuth integrations, waitlist/capacity
+// logic, escalation chains) — see the ROUTING GUIDANCE in lib/knowledge.ts.
+const PATH_B_SIGNALS = [
+  "portal", "migrate", "migration", "hipaa", "sso", "saml", "scim", "audit",
   "self-host", "self host", "on-premise", "on prem", "data residency",
-  "enterprise", "sla", "salesforce", "netsuite", "sap", "legacy",
-  "thousands", "multi-region", "custom agent", "ai agent",
+  "enterprise", "sla", "salesforce", "hubspot", "netsuite", "sap", "legacy",
+  "thousands", "multi-region", "custom agent", "ai agent", "waitlist",
+  "capacity", "escalat", "approver", "approvers",
 ]
 
-const SIMPLE_SIGNALS = [
+// Path A: one form, in the broadest sense, regardless of size or logic.
+const PATH_A_SIGNALS = [
   "form", "survey", "quiz", "poll", "signature", "sign", "pdf", "document",
-  "portal", "dashboard", "crm", "calculator", "booking", "registration",
-  "payment", "feedback", "nps", "intake", "onboarding", "approval",
+  "dashboard", "crm", "calculator", "booking", "registration",
+  "payment", "feedback", "nps", "intake", "onboarding", "application",
+  "checklist", "order",
 ]
 
 function cta(
@@ -32,25 +38,22 @@ function cta(
 export function demoReply(message: string): string {
   const text = message.toLowerCase()
 
-  if (COMPLEX_SIGNALS.some((s) => text.includes(s))) {
+  if (PATH_B_SIGNALS.some((s) => text.includes(s))) {
     return (
-      "That one sits with our team rather than a self-serve build. It touches " +
-      "systems and controls that need to be set up properly the first time.\n\n" +
+      "That's a system with more than one role in it, so it goes to our team " +
+      "rather than self-serve.\n\n" +
       "Quick question so we point you at the right person: roughly how many " +
       "people would be using this day to day?" +
-      cta("complex", "demo", "Book a call", LINKS.demo)
+      cta("complex", "demo", "Book a demo", LINKS.demo)
     )
   }
 
-  if (SIMPLE_SIGNALS.some((s) => text.includes(s))) {
+  if (PATH_A_SIGNALS.some((s) => text.includes(s))) {
     return (
-      "Yes, that's a standard Formaloo build, and you can have it running " +
-      "today.\n\n" +
-      "1. Start from a template or describe it to Formaloo AI to generate the fields.\n" +
-      "2. Add conditional logic so people only see what applies to them.\n" +
-      "3. Publish it, and watch responses land in a dashboard you can filter.\n\n" +
-      `Closest starting point: ${LINKS.templates}` +
-      cta("simple", "signup", "Start building free", LINKS.signup)
+      "Yes, that's a form at its core, and you can build it yourself right " +
+      "now.\n\nSign up and Magic Create opens automatically; describe it and " +
+      "it builds the fields and logic for you." +
+      cta("simple", "signup", "Sign up & build", LINKS.signup)
     )
   }
 
