@@ -132,7 +132,7 @@ Help center: https://help.formaloo.com/en/
 Concierge service: https://www.formaloo.com/concierge
 Enterprise: https://www.formaloo.com/enterprise
 
-# ROUTING GUIDANCE (form-scope router, v2)
+# ROUTING GUIDANCE (form-scope router, v3 — Magic Create prompt handoff)
 
 Route on ONE question: is this, at its core, a single form people fill out
 (Path A), or a multi-role system (Path B)? Not "is this simple" — a 60-field

@@ -1,11 +1,105 @@
 "use client"
 
 import * as React from "react"
+import { Check, Copy } from "lucide-react"
 
 import { Logo, type LogoState } from "@/components/brand/logo"
 import { CtaCard } from "@/components/cta-card"
 import type { Cta } from "@/lib/parse-cta"
 import { cn } from "@/lib/utils"
+
+/**
+ * Generated Magic Create prompts arrive fenced in triple backticks so they
+ * render as their own copyable block rather than inline prose. This mirrors
+ * markdown fences without pulling in a markdown parser: `text` alternates
+ * with fenced code, and a fence with no closing ``` yet (still streaming) is
+ * treated as code through to the end of the string so it grows live.
+ */
+type Segment =
+  | { type: "text"; content: string }
+  | { type: "code"; content: string }
+
+function splitSegments(raw: string): Segment[] {
+  const segments: Segment[] = []
+  let i = 0
+
+  while (i < raw.length) {
+    const openIdx = raw.indexOf("```", i)
+    if (openIdx === -1) {
+      segments.push({ type: "text", content: raw.slice(i) })
+      break
+    }
+    if (openIdx > i) {
+      segments.push({ type: "text", content: raw.slice(i, openIdx) })
+    }
+
+    let codeStart = openIdx + 3
+    const newlineIdx = raw.indexOf("\n", codeStart)
+    const langCandidate =
+      newlineIdx === -1 ? "" : raw.slice(codeStart, newlineIdx)
+    if (newlineIdx !== -1 && /^[a-zA-Z0-9_-]{0,20}$/.test(langCandidate)) {
+      codeStart = newlineIdx + 1
+    }
+
+    const closeIdx = raw.indexOf("```", codeStart)
+    if (closeIdx === -1) {
+      // Fence hasn't closed yet, still streaming in, take the rest as code.
+      segments.push({
+        type: "code",
+        content: raw.slice(codeStart).replace(/\n$/, ""),
+      })
+      i = raw.length
+    } else {
+      segments.push({
+        type: "code",
+        content: raw.slice(codeStart, closeIdx).replace(/\n$/, ""),
+      })
+      i = closeIdx + 3
+    }
+  }
+
+  return segments
+}
+
+function CopyableBlock({ content }: { content: string }) {
+  const [copied, setCopied] = React.useState(false)
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    } catch {
+      // Clipboard blocked (permissions, insecure context) — nothing useful
+      // to fall back to here; the text is still fully selectable.
+    }
+  }
+
+  return (
+    <div className="animate-rise-in my-3 overflow-hidden rounded-2xl border border-border bg-secondary">
+      <div className="flex items-center justify-between border-b border-border/70 px-3.5 py-2">
+        <span className="text-[0.7rem] font-semibold tracking-wide text-muted-foreground uppercase">
+          Magic Create prompt
+        </span>
+        <button
+          type="button"
+          onClick={copy}
+          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+        >
+          {copied ? (
+            <Check className="size-3.5" />
+          ) : (
+            <Copy className="size-3.5" />
+          )}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto px-3.5 py-3 font-mono text-[0.82rem] leading-relaxed whitespace-pre-wrap">
+        {content}
+      </pre>
+    </div>
+  )
+}
 
 /**
  * Minimal inline formatter. The model is told to answer in short prose and
@@ -65,21 +159,22 @@ function formatInline(text: string, keyPrefix: string): React.ReactNode[] {
   return nodes
 }
 
-function RichText({ text }: { text: string }) {
-  const blocks = text.split(/\n{2,}/)
+function ProseBlocks({ text, keyPrefix }: { text: string; keyPrefix: string }) {
+  const blocks = text.split(/\n{2,}/).filter((b) => b.trim().length > 0)
 
   return (
     <>
       {blocks.map((block, bi) => {
         const lines = block.split("\n")
         const isList = lines.every((l) => /^\s*(\d+\.|[-*•])\s+/.test(l))
+        const key = `${keyPrefix}-${bi}`
 
         if (isList) {
           const ordered = /^\s*\d+\./.test(lines[0])
           const Tag = ordered ? "ol" : "ul"
           return (
             <Tag
-              key={bi}
+              key={key}
               className={cn(
                 "my-2 space-y-1.5 pl-5",
                 ordered ? "list-decimal" : "list-disc"
@@ -89,7 +184,7 @@ function RichText({ text }: { text: string }) {
                 <li key={li} className="pl-0.5">
                   {formatInline(
                     line.replace(/^\s*(\d+\.|[-*•])\s+/, ""),
-                    `${bi}-${li}`
+                    `${key}-${li}`
                   )}
                 </li>
               ))}
@@ -98,11 +193,27 @@ function RichText({ text }: { text: string }) {
         }
 
         return (
-          <p key={bi} className="my-2 first:mt-0 last:mb-0">
-            {formatInline(block, `${bi}`)}
+          <p key={key} className="my-2 first:mt-0 last:mb-0">
+            {formatInline(block, key)}
           </p>
         )
       })}
+    </>
+  )
+}
+
+function RichText({ text }: { text: string }) {
+  const segments = splitSegments(text)
+
+  return (
+    <>
+      {segments.map((segment, si) =>
+        segment.type === "code" ? (
+          <CopyableBlock key={`c${si}`} content={segment.content} />
+        ) : (
+          <ProseBlocks key={`t${si}`} text={segment.content} keyPrefix={`t${si}`} />
+        )
+      )}
     </>
   )
 }
