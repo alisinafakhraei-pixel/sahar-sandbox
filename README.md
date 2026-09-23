@@ -80,6 +80,46 @@ the conversation actually reached, not re-asked of the model:
 
 The migration is at `supabase/migrations/0001_chat_logs.sql`.
 
+## V2: Vertex AI Agent Builder (A/B test)
+
+`/v2` is a side-by-side comparison, same chat UI, a different backend
+(`app/api/chat-v2/route.ts`), reachable from a banner on both `/` and `/v2`
+linking to the other one. It reproduces a Google Agent Builder (ADK) agent
+Alisina built separately: his exact system instruction
+(`lib/vertex-agent-prompt.ts`, verbatim, not merged with v1's Path A/B logic),
+answered by `gemini-3.5-flash` on Vertex AI with the native `google_search`
+and `url_context` tools standing in for his ADK agent's two sub-agent tools.
+Deliberately **not connected to Supabase**, no CTA format, this exists to see
+that agent's own answers unmodified.
+
+```
+VERTEX_API_KEY=AQ...
+```
+
+A **Vertex AI key**, not a Gemini Developer API key, they authenticate to
+different APIs and are not interchangeable (`aiplatform.googleapis.com` vs
+`generativelanguage.googleapis.com`). Without it, `/v2` responds with a plain
+"not wired up" message; nothing else breaks.
+
+Two things worth knowing if you touch this route:
+
+- **`thinkingConfig: { thinkingBudget: 0 }` is required.** Without it,
+  `gemini-3.5-flash` spends part of its output budget on hidden reasoning
+  even with search tools attached, which was silently truncating replies
+  mid-sentence (`finishReason: MAX_TOKENS`). Confirmed directly against the
+  API before and after the fix, don't remove this thinking it's dead code.
+- **Grounded replies are slow: 15-50s observed.** `maxDuration = 60` is set
+  explicitly (the Vercel Hobby-plan ceiling); a slow search could still
+  occasionally hit it. This is a real product tradeoff of search-grounded
+  generation, not a bug to chase.
+
+This agent's instruction has no length constraint, so it writes full
+markdown (`### headings`, `---` rules) unlike v1's short-prose replies.
+`components/message.tsx`'s block splitter handles headings and rules
+regardless of blank-line spacing (a heading is often immediately followed
+by a list). Single-asterisk italics (`*like this*`) aren't converted, a
+known small rough edge, cosmetic only.
+
 ## Shape of it
 
 | Path | What it does |
@@ -96,6 +136,10 @@ The migration is at `supabase/migrations/0001_chat_logs.sql`.
 | `lib/chat-log.ts` | Outcome + Gemini topic/description, Supabase upsert |
 | `lib/supabase-admin.ts` | Server-only Supabase client (service_role) |
 | `lib/intercom-search.ts` | Live Intercom Articles search, formatted for the prompt |
+| `app/v2/page.tsx` | V2 comparison page, same UI pointed at `/api/chat-v2` |
+| `app/api/chat-v2/route.ts` | Vertex AI proxy for the Agent Builder comparison |
+| `lib/vertex-agent-prompt.ts` | Alisina's Agent Builder instruction, verbatim |
+| `components/version-banner.tsx` | The V1/V2 banner, links each page to the other |
 | `components/theme-lab.tsx` | Live colour editor (see below) |
 | `components/theme-toggle.tsx` | Light / dark (light is the default, no system tracking) |
 
@@ -127,11 +171,14 @@ Discovery Engine data store.
 
 ## Before this goes anywhere public
 
-- [ ] **Rate limiting is in-memory** (`app/api/chat/route.ts`). Resets on deploy
-      and does not span instances. Needs Redis/Upstash.
-- [ ] No conversation logging yet. That is the next milestone, along with email
-      capture on the complex path.
+- [ ] **Rate limiting is in-memory** (`app/api/chat/route.ts`,
+      `app/api/chat-v2/route.ts`). Resets on deploy and does not span
+      instances. Needs Redis/Upstash.
 - [ ] Only the hero is built. The ~11 marketing sections below the fold are not.
+- [ ] `/v2` is a comparison prototype, not a decision. Nobody has chosen
+      between v1's direct API calls, v2's Agent Builder reproduction, and
+      FRM-3567's original heavier Google Cloud stack (Dialogflow CX,
+      Discovery Engine, Cloud Run, BigQuery).
 - [ ] Rotate any API key that has been pasted into Linear or a chat transcript.
 
 ## Theme lab
