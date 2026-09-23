@@ -62,10 +62,12 @@ ${transcript}
       },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
+        // Unlike the main flash model, gemini-flash-lite-latest 400s if
+        // thinkingConfig is present at all (not just budget: 0), so it's
+        // omitted here rather than reused from the main chat route.
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 200,
-          thinkingConfig: { thinkingBudget: 0 },
+          maxOutputTokens: 300,
         },
       }),
     })
