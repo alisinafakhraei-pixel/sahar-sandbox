@@ -17,6 +17,22 @@ export function ChatExperience() {
   const [busy, setBusy] = React.useState(false)
   const [demoReason, setDemoReason] = React.useState<string | null>(null)
 
+  // Identifies this conversation for the Supabase log (server-side only,
+  // never a per-visitor identity). One id per conversation, regenerated on
+  // "Start over" so a fresh thread logs as its own row. useRef's initial
+  // value would otherwise be re-evaluated (and discarded) on every render,
+  // so it's generated lazily the first time it's actually read instead.
+  const conversationIdRef = React.useRef<string | null>(null)
+  function conversationId(): string {
+    if (!conversationIdRef.current) {
+      conversationIdRef.current =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    }
+    return conversationIdRef.current
+  }
+
   const abortRef = React.useRef<AbortController | null>(null)
   const bottomRef = React.useRef<HTMLDivElement>(null)
   const started = messages.length > 0
@@ -62,6 +78,7 @@ export function ChatExperience() {
               role: m.role,
               text: m.text,
             })),
+            conversationId: conversationId(),
           }),
         })
 
@@ -125,6 +142,7 @@ export function ChatExperience() {
     setMessages([])
     setInput("")
     setBusy(false)
+    conversationIdRef.current = null // Next send() lazily mints a fresh one.
   }
 
   return (

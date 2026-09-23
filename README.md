@@ -27,7 +27,39 @@ It must be a standard Google AI Studio key, prefix `AIzaSy`, 39 characters.
 Get one at https://aistudio.google.com/apikey. The key is read server-side in
 `app/api/chat/route.ts` only; never expose it with a `NEXT_PUBLIC_` prefix.
 
-Optional: `GEMINI_MODEL` (defaults to `gemini-2.5-flash`).
+Optional: `GEMINI_MODEL` (defaults to `gemini-flash-latest`).
+
+## Chat log (Supabase)
+
+Every finished turn is upserted into a `chat_logs` table, one row per
+conversation (keyed by a client-generated `conversationId`, regenerated on
+"Start over"). Without the two env vars below, this silently no-ops, the
+chat itself is unaffected either way.
+
+```
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
+
+Get both from the Supabase dashboard: Project Settings -> API. The
+service_role key bypasses RLS; `chat_logs` has RLS enabled with no policies
+at all, so that key is the only way in or out of the table, the anon/
+publishable key the browser could ever see has zero access to it.
+
+Columns: `chat_log` (jsonb, the full ordered transcript), `transcript_text`
+(flattened + a GIN full-text index, for search), `topic`/`description` (a
+cheap `gemini-flash-lite-latest` call summarizes the use case, best-effort,
+`lib/chat-log.ts`), and `outcome` — derived deterministically from the CTA
+the conversation actually reached, not re-asked of the model:
+
+| outcome | meaning |
+| --- | --- |
+| `signup_prompt` | Path A: got a Magic Create prompt + signup CTA |
+| `demo_cta` | Path B: qualifying finished, "Book a demo" CTA shown |
+| `qualifying` | Path B: mid-flow, a question was asked, no CTA yet |
+| `unresolved` | still vague, or the visitor never got routed |
+
+The migration is at `supabase/migrations/0001_chat_logs.sql`.
 
 ## Shape of it
 
@@ -42,8 +74,10 @@ Optional: `GEMINI_MODEL` (defaults to `gemini-2.5-flash`).
 | `lib/parse-cta.ts` | Pulls the CTA sentinel out of the stream |
 | `lib/demo-reply.ts` | Scripted stand-in used when no key is configured |
 | `lib/nav.ts` | Header mega-menu structure and links |
+| `lib/chat-log.ts` | Outcome + Gemini topic/description, Supabase upsert |
+| `lib/supabase-admin.ts` | Server-only Supabase client (service_role) |
 | `components/theme-lab.tsx` | Live colour editor (see below) |
-| `components/theme-toggle.tsx` | Light / system / dark |
+| `components/theme-toggle.tsx` | Light / dark (light is the default, no system tracking) |
 
 ### How routing works
 

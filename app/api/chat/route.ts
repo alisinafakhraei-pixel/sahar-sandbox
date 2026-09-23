@@ -1,9 +1,13 @@
-import { NextRequest } from "next/server"
+import { NextRequest, after } from "next/server"
 
 import { SYSTEM_PROMPT } from "@/lib/system-prompt"
 import { demoReply } from "@/lib/demo-reply"
+import { logConversation } from "@/lib/chat-log"
+import { parseCta } from "@/lib/parse-cta"
 
 export const runtime = "nodejs"
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest"
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -29,7 +33,9 @@ function rateLimited(ip: string) {
 
 type Turn = { role: "user" | "model"; text: string }
 
-function validate(body: unknown): Turn[] | null {
+function validate(
+  body: unknown
+): { turns: Turn[]; conversationId: string | null } | null {
   if (typeof body !== "object" || body === null) return null
   const messages = (body as { messages?: unknown }).messages
   if (!Array.isArray(messages) || messages.length === 0) return null
@@ -43,7 +49,15 @@ function validate(body: unknown): Turn[] | null {
     if (typeof text !== "string" || text.length === 0) return null
     turns.push({ role, text: text.slice(0, MAX_CHARS) })
   }
-  return turns.at(-1)?.role === "user" ? turns : null
+  if (turns.at(-1)?.role !== "user") return null
+
+  // Optional: only used for the Supabase log. A missing or malformed id just
+  // means this turn won't be logged, it never fails the chat request itself.
+  const rawId = (body as { conversationId?: unknown }).conversationId
+  const conversationId =
+    typeof rawId === "string" && UUID_RE.test(rawId) ? rawId : null
+
+  return { turns, conversationId }
 }
 
 function chunk(text: string, size = 3) {
@@ -77,13 +91,28 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  let turns: Turn[] | null
+  let parsed: { turns: Turn[]; conversationId: string | null } | null
   try {
-    turns = validate(await req.json())
+    parsed = validate(await req.json())
   } catch {
-    turns = null
+    parsed = null
   }
-  if (!turns) return new Response("Bad request.", { status: 400 })
+  if (!parsed) return new Response("Bad request.", { status: 400 })
+  const { turns, conversationId } = parsed
+
+  function logIfPossible(replyText: string, model: string) {
+    if (!conversationId) return
+    const { text, cta } = parseCta(replyText)
+    after(() =>
+      logConversation({
+        conversationId,
+        turns: [...turns, { role: "model", text }],
+        cta,
+        model,
+        geminiApiKey: process.env.GEMINI_API_KEY,
+      })
+    )
+  }
 
   const apiKey = process.env.GEMINI_API_KEY
 
@@ -92,6 +121,7 @@ export async function POST(req: NextRequest) {
   if (!apiKey) {
     const isFollowUp = turns.filter((t) => t.role === "user").length > 1
     const reply = demoReply(turns.at(-1)!.text, isFollowUp)
+    logIfPossible(reply, "demo")
     return new Response(textStream(chunk(reply)), {
       headers: {
         "content-type": "text/plain; charset=utf-8",
@@ -141,6 +171,7 @@ export async function POST(req: NextRequest) {
     // Fall back rather than showing a dead box to a homepage visitor.
     const isFollowUp = turns.filter((t) => t.role === "user").length > 1
     const reply = demoReply(turns.at(-1)!.text, isFollowUp)
+    logIfPossible(reply, "demo")
     return new Response(textStream(chunk(reply)), {
       headers: {
         "content-type": "text/plain; charset=utf-8",
@@ -150,7 +181,14 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Unwrap Gemini's SSE into a plain text stream for the client.
+  // Unwrap Gemini's SSE into a plain text stream for the client, accumulating
+  // the full reply so it can be logged once streaming finishes.
+  let fullText = ""
+  let resolveStreamDone: () => void
+  const streamDone = new Promise<void>((resolve) => {
+    resolveStreamDone = resolve
+  })
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const reader = upstream.body!.getReader()
@@ -177,6 +215,7 @@ export async function POST(req: NextRequest) {
                 json?.candidates?.[0]?.content?.parts ?? ([] as unknown[])
               for (const part of parts) {
                 if (typeof part?.text === "string" && part.text) {
+                  fullText += part.text
                   controller.enqueue(encoder.encode(part.text))
                 }
               }
@@ -189,9 +228,25 @@ export async function POST(req: NextRequest) {
         console.error("[chat] stream aborted", error)
       } finally {
         controller.close()
+        resolveStreamDone()
       }
     },
   })
+
+  if (conversationId) {
+    after(async () => {
+      await streamDone
+      if (!fullText) return // Aborted before anything came back — nothing to log.
+      const { text, cta } = parseCta(fullText)
+      await logConversation({
+        conversationId,
+        turns: [...turns, { role: "model", text }],
+        cta,
+        model: MODEL,
+        geminiApiKey: apiKey,
+      })
+    })
+  }
 
   return new Response(stream, {
     headers: {
