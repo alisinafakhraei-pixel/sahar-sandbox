@@ -1,9 +1,10 @@
 import { NextRequest, after } from "next/server"
 
-import { SYSTEM_PROMPT } from "@/lib/system-prompt"
+import { buildSystemPrompt } from "@/lib/system-prompt"
 import { demoReply } from "@/lib/demo-reply"
 import { logConversation } from "@/lib/chat-log"
 import { parseCta } from "@/lib/parse-cta"
+import { searchHelpCenter, formatHelpResults } from "@/lib/intercom-search"
 
 export const runtime = "nodejs"
 
@@ -131,6 +132,17 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // Live, real-time search against the actual Intercom help center for the
+  // visitor's latest message — never RAG, never re-indexed, so it can never
+  // go stale the way a pre-embedded copy would. Gracefully empty if the
+  // token isn't configured or the search itself fails; the model is told
+  // exactly what to do with an empty result (fall back to normal routing).
+  const intercomToken = process.env.INTERCOM_ACCESS_TOKEN
+  const helpArticles = intercomToken
+    ? await searchHelpCenter(turns.at(-1)!.text, intercomToken)
+    : []
+  const systemInstructionText = buildSystemPrompt(formatHelpResults(helpArticles))
+
   let upstream: Response
   try {
     upstream = await fetch(
@@ -142,7 +154,7 @@ export async function POST(req: NextRequest) {
           "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          systemInstruction: { parts: [{ text: systemInstructionText }] },
           contents: turns.map((t) => ({
             role: t.role,
             parts: [{ text: t.text }],

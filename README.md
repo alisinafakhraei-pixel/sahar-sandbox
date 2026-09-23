@@ -29,6 +29,25 @@ Get one at https://aistudio.google.com/apikey. The key is read server-side in
 
 Optional: `GEMINI_MODEL` (defaults to `gemini-flash-latest`).
 
+## Live help-center search (v1 only)
+
+Before answering, v1 searches the real, live Intercom help center
+(help.formaloo.com) for the visitor's latest message and hands the top
+matches to the model as part of that turn's system prompt. Deliberately not
+RAG: nothing is pre-embedded or re-indexed, so an article edited five
+minutes ago is already reflected, there's no staleness window to manage.
+
+```
+INTERCOM_ACCESS_TOKEN=tok:...
+```
+
+Generate one at app.intercom.com -> Settings -> Developer Hub -> your app ->
+Authentication, with **Articles: Read** permission. Server-side only.
+Without it, this step is skipped entirely and v1 falls straight through to
+normal Path A/B routing, nothing breaks, it just can't answer "how does X
+already work" questions from real docs. See `lib/intercom-search.ts` and the
+"PRODUCT QUESTIONS — HELP CENTER FIRST" section of `lib/system-prompt.ts`.
+
 ## Chat log (Supabase)
 
 Every finished turn is upserted into a `chat_logs` table, one row per
@@ -76,6 +95,7 @@ The migration is at `supabase/migrations/0001_chat_logs.sql`.
 | `lib/nav.ts` | Header mega-menu structure and links |
 | `lib/chat-log.ts` | Outcome + Gemini topic/description, Supabase upsert |
 | `lib/supabase-admin.ts` | Server-only Supabase client (service_role) |
+| `lib/intercom-search.ts` | Live Intercom Articles search, formatted for the prompt |
 | `components/theme-lab.tsx` | Live colour editor (see below) |
 | `components/theme-toggle.tsx` | Light / dark (light is the default, no system tracking) |
 
