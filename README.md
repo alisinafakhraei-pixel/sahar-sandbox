@@ -71,8 +71,11 @@ once the reply text starts streaming in, unlike the transient pill).
 
 Every finished turn is upserted into a `chat_logs` table, one row per
 conversation (keyed by a client-generated `conversationId`, regenerated on
-"Start over"). Without the two env vars below, this silently no-ops, the
-chat itself is unaffected either way.
+"Start over"). Both `/api/chat` (v1) and `/api/chat-v2` write into this same
+table, tagged by a `version` column (`'v1'` or `'v2'`), so every conversation
+from either backend is visible together, filterable by which one handled it.
+Without the two env vars below, this silently no-ops, the chat itself is
+unaffected either way.
 
 ```
 SUPABASE_URL=https://xxxx.supabase.co
@@ -97,19 +100,31 @@ the conversation actually reached, not re-asked of the model:
 | `qualifying` | Path B: mid-flow, a question was asked, no CTA yet |
 | `unresolved` | still vague, or the visitor never got routed |
 
-The migration is at `supabase/migrations/0001_chat_logs.sql`.
+The migrations are at `supabase/migrations/0001_chat_logs.sql` (the base
+table) and `supabase/migrations/0002_chat_logs_version.sql` (the `version`
+column).
 
 ## V2: Vertex AI Agent Builder (A/B test)
 
 `/v2` is a side-by-side comparison, same chat UI, a different backend
 (`app/api/chat-v2/route.ts`), reachable from a banner on both `/` and `/v2`
 linking to the other one. It reproduces a Google Agent Builder (ADK) agent
-Alisina built separately: his exact system instruction
-(`lib/vertex-agent-prompt.ts`, verbatim, not merged with v1's Path A/B logic),
-answered by `gemini-3.5-flash` on Vertex AI with the native `google_search`
-and `url_context` tools standing in for his ADK agent's two sub-agent tools.
-Deliberately **not connected to Supabase**, no CTA format, this exists to see
-that agent's own answers unmodified.
+Alisina built separately: his system instruction
+(`lib/vertex-agent-prompt.ts`, not sharing v1's Path A/B copy in
+`lib/system-prompt.ts`), answered by `gemini-3.5-flash` on Vertex AI with the
+native `google_search` and `url_context` tools standing in for his ADK
+agent's two sub-agent tools.
+
+The original instruction referenced "Path A"/"Path B" build routing without
+ever defining either, so it fell back to long generic DIY walkthroughs for
+every build request. `lib/vertex-agent-prompt.ts` adds an explicit "THE TWO
+BUILD PATHS" section fixing that (Path A: a short Magic Create prompt, no
+manual UI walkthrough; Path B: qualify one question at a time, then a demo
+CTA, no DIY architecture guide) — everything else is still his original
+text. It emits the same `<<<CTA ...>>>` sentinel v1 does (imported from
+`lib/system-prompt.ts` so the two never drift), so it gets the same
+`<CtaCard>` UI and logs into `chat_logs` the same way, tagged
+`version: "v2"`.
 
 ```
 VERTEX_API_KEY=AQ...

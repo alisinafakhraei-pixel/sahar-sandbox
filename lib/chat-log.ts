@@ -114,12 +114,14 @@ export async function logConversation({
   cta,
   model,
   geminiApiKey,
+  version = "v1",
 }: {
   conversationId: string
   turns: LogTurn[]
   cta: Cta | null
   model: string
   geminiApiKey: string | undefined
+  version?: "v1" | "v2"
 }): Promise<void> {
   const supabase = getSupabaseAdmin()
   if (!supabase) return // Not configured locally — silent no-op, same as demo mode.
@@ -144,6 +146,7 @@ export async function logConversation({
         outcome,
         cta_href: cta?.href ?? null,
         model,
+        version,
       },
       { onConflict: "conversation_id" }
     )

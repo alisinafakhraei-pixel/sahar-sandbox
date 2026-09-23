@@ -1,6 +1,8 @@
-import { NextRequest } from "next/server"
+import { NextRequest, after } from "next/server"
 
 import { VERTEX_AGENT_INSTRUCTION } from "@/lib/vertex-agent-prompt"
+import { logConversation } from "@/lib/chat-log"
+import { parseCta } from "@/lib/parse-cta"
 
 /**
  * V2 comparison backend: reproduces Alisina's Google Agent Builder (ADK)
@@ -12,9 +14,11 @@ import { VERTEX_AGENT_INSTRUCTION } from "@/lib/vertex-agent-prompt"
  * tools on a single gemini-3.5-flash call — not a literal invocation of the
  * deployed multi-agent graph, an equivalent one.
  *
- * Deliberately NOT connected to Supabase and NOT sharing lib/system-prompt.ts
- * — this route exists to show his agent's own instruction's behavior
- * unmodified, side by side with the V1 build.
+ * NOT sharing lib/system-prompt.ts's Path A/B copy — this route exists to
+ * show his agent's own instruction's behavior side by side with the V1
+ * build. It does now log into the same `chat_logs` Supabase table v1 uses
+ * (tagged `version: "v2"`, see lib/chat-log.ts) so every conversation from
+ * either backend shows up in one place.
  */
 
 export const runtime = "nodejs"
@@ -27,6 +31,8 @@ const MODEL = "gemini-3.5-flash"
 const PROJECT = "663193170040"
 const LOCATION = "global"
 const ENDPOINT = `https://aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent`
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const MAX_TURNS = 12
 const MAX_CHARS = 2000
@@ -48,7 +54,9 @@ function rateLimited(ip: string) {
 
 type Turn = { role: "user" | "model"; text: string }
 
-function validate(body: unknown): Turn[] | null {
+function validate(
+  body: unknown
+): { turns: Turn[]; conversationId: string | null } | null {
   if (typeof body !== "object" || body === null) return null
   const messages = (body as { messages?: unknown }).messages
   if (!Array.isArray(messages) || messages.length === 0) return null
@@ -62,7 +70,15 @@ function validate(body: unknown): Turn[] | null {
     if (typeof text !== "string" || text.length === 0) return null
     turns.push({ role, text: text.slice(0, MAX_CHARS) })
   }
-  return turns.at(-1)?.role === "user" ? turns : null
+  if (turns.at(-1)?.role !== "user") return null
+
+  // Optional: only used for the Supabase log. A missing or malformed id just
+  // means this turn won't be logged, it never fails the chat request itself.
+  const rawId = (body as { conversationId?: unknown }).conversationId
+  const conversationId =
+    typeof rawId === "string" && UUID_RE.test(rawId) ? rawId : null
+
+  return { turns, conversationId }
 }
 
 function chunk(text: string, size = 3) {
@@ -101,13 +117,14 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let turns: Turn[] | null
+  let parsed: { turns: Turn[]; conversationId: string | null } | null
   try {
-    turns = validate(await req.json())
+    parsed = validate(await req.json())
   } catch {
-    turns = null
+    parsed = null
   }
-  if (!turns) return new Response("Bad request.", { status: 400 })
+  if (!parsed) return new Response("Bad request.", { status: 400 })
+  const { turns, conversationId } = parsed
 
   const apiKey = process.env.VERTEX_API_KEY
   if (!apiKey) {
@@ -187,6 +204,24 @@ export async function POST(req: NextRequest) {
   if (!text) {
     text =
       "The Vertex agent came back with no text for this one. Try rephrasing."
+  }
+
+  // Vertex returns the full reply in one shot (no real token stream to wait
+  // on, unlike v1), so unlike v1's `after(() => streamDone.then(...))` this
+  // can log immediately — `after()` here only defers it off the response's
+  // critical path, not off any further async work.
+  if (conversationId) {
+    const { text: visibleText, cta } = parseCta(text)
+    after(() =>
+      logConversation({
+        conversationId,
+        turns: [...turns, { role: "model", text: visibleText }],
+        cta,
+        model: MODEL,
+        geminiApiKey: process.env.GEMINI_API_KEY,
+        version: "v2",
+      })
+    )
   }
 
   return new Response(textStream(chunk(text)), {
