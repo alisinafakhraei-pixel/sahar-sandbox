@@ -159,15 +159,78 @@ function formatInline(text: string, keyPrefix: string): React.ReactNode[] {
   return nodes
 }
 
+/**
+ * V1's system prompt constrains replies to short plain prose, so the original
+ * block splitter (blank-line-separated paragraphs/lists) covered it fine.
+ * V2's agent has no such constraint and writes full markdown documents
+ * (### headings, --- rules), which used to render as literal text. Headings
+ * and rules are pulled out as their own blocks here regardless of blank-line
+ * spacing, since a heading is often followed immediately by a list with no
+ * blank line between them.
+ */
+type ProseBlock =
+  | { type: "heading"; level: number; text: string }
+  | { type: "hr" }
+  | { type: "text"; lines: string[] }
+
+function splitProseBlocks(text: string): ProseBlock[] {
+  const blocks: ProseBlock[] = []
+  let current: string[] = []
+
+  function flush() {
+    if (current.length > 0) {
+      blocks.push({ type: "text", lines: current })
+      current = []
+    }
+  }
+
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim()
+    const heading = /^(#{1,6})\s+(.*)$/.exec(trimmed)
+    if (heading) {
+      flush()
+      blocks.push({ type: "heading", level: heading[1].length, text: heading[2] })
+    } else if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      flush()
+      blocks.push({ type: "hr" })
+    } else if (trimmed === "") {
+      flush()
+    } else {
+      current.push(line)
+    }
+  }
+  flush()
+  return blocks
+}
+
 function ProseBlocks({ text, keyPrefix }: { text: string; keyPrefix: string }) {
-  const blocks = text.split(/\n{2,}/).filter((b) => b.trim().length > 0)
+  const blocks = splitProseBlocks(text)
 
   return (
     <>
       {blocks.map((block, bi) => {
-        const lines = block.split("\n")
-        const isList = lines.every((l) => /^\s*(\d+\.|[-*•])\s+/.test(l))
         const key = `${keyPrefix}-${bi}`
+
+        if (block.type === "hr") {
+          return <hr key={key} className="my-3 border-border" />
+        }
+
+        if (block.type === "heading") {
+          return (
+            <p
+              key={key}
+              className={cn(
+                "mt-3 mb-1 font-semibold first:mt-0",
+                block.level <= 2 ? "text-[1.05rem]" : "text-[0.95rem]"
+              )}
+            >
+              {formatInline(block.text, key)}
+            </p>
+          )
+        }
+
+        const lines = block.lines
+        const isList = lines.every((l) => /^\s*(\d+\.|[-*•])\s+/.test(l))
 
         if (isList) {
           const ordered = /^\s*\d+\./.test(lines[0])
@@ -194,7 +257,7 @@ function ProseBlocks({ text, keyPrefix }: { text: string; keyPrefix: string }) {
 
         return (
           <p key={key} className="my-2 first:mt-0 last:mb-0">
-            {formatInline(block, key)}
+            {formatInline(lines.join("\n"), key)}
           </p>
         )
       })}

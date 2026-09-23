@@ -8,15 +8,14 @@ export default function V2Page() {
     <>
       <VersionBanner
         version={2}
-        description="Vertex AI Agent Builder — Gemini 3.5 Flash + Search + URL tools (not wired yet)"
+        description="Vertex AI Agent Builder — Gemini 3.5 Flash + Google Search + URL Context, no Supabase"
         otherHref="/"
         otherLabel="Back to Version 1"
       />
       <div className="pt-9">
         <SiteHeader topOffset />
         <main>
-          {/* apiPath will point at the Vertex-backed route once that's built. */}
-          <ChatExperience apiPath="/api/chat" />
+          <ChatExperience apiPath="/api/chat-v2" />
         </main>
         <SiteFooter />
       </div>
