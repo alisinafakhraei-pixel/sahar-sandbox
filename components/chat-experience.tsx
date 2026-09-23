@@ -3,9 +3,10 @@
 import * as React from "react"
 import { AlertTriangle, RotateCcw } from "lucide-react"
 
-import { Message, type ChatMessage } from "@/components/message"
+import { Message, type ChatMessage, type SearchStatus } from "@/components/message"
 import { PromptBox } from "@/components/prompt-box"
 import { parseCta } from "@/lib/parse-cta"
+import { extractLeadingMeta } from "@/lib/parse-meta"
 import { cn } from "@/lib/utils"
 
 let idCounter = 0
@@ -114,10 +115,29 @@ export function ChatExperience({
           const { done, value } = await reader.read()
           if (done) break
           accumulated += decoder.decode(value, { stream: true })
-          const { text: visible, cta } = parseCta(accumulated)
+
+          // Server-emitted status events (v1 only — v2 never sends these,
+          // so events is always empty there and rest === accumulated,
+          // completely transparent). Re-derived fresh each chunk, same
+          // pattern as the CTA parse below.
+          const { events, rest } = extractLeadingMeta(accumulated)
+
+          let search: SearchStatus | null = null
+          for (const evt of events) {
+            if (evt.type === "search") {
+              search =
+                evt.phase === "start"
+                  ? { phase: "start", query: evt.query }
+                  : { phase: "done", count: evt.count }
+            } else if (evt.type === "mode" && evt.mode === "demo") {
+              setDemoReason(evt.reason ?? "unknown")
+            }
+          }
+
+          const { text: visible, cta } = parseCta(rest)
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === replyId ? { ...m, text: visible, cta } : m
+              m.id === replyId ? { ...m, text: visible, cta, search } : m
             )
           )
         }

@@ -5,6 +5,7 @@ import { demoReply } from "@/lib/demo-reply"
 import { logConversation } from "@/lib/chat-log"
 import { parseCta } from "@/lib/parse-cta"
 import { searchHelpCenter, formatHelpResults } from "@/lib/intercom-search"
+import { metaMarker } from "@/lib/parse-meta"
 
 export const runtime = "nodejs"
 
@@ -132,70 +133,21 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Live, real-time search against the actual Intercom help center for the
-  // visitor's latest message — never RAG, never re-indexed, so it can never
-  // go stale the way a pre-embedded copy would. Gracefully empty if the
-  // token isn't configured or the search itself fails; the model is told
-  // exactly what to do with an empty result (fall back to normal routing).
+  // Everything past this point (help-center search, the Gemini call, and the
+  // demo fallback if that call fails) lives inside a single stream, so the
+  // search can be reported to the client in real time as it happens rather
+  // than silently finishing before the response even opens. The outer HTTP
+  // headers can no longer promise "live" vs "demo" up front the way the
+  // no-apiKey branch above still does (that one is decided synchronously,
+  // before any of this), so a fallback here is signalled with a `<<<META
+  // {"type":"mode","mode":"demo",...}>>>` marker in the body instead — the
+  // client checks for that in addition to the header, never instead of it.
+  const isFollowUp = turns.filter((t) => t.role === "user").length > 1
   const intercomToken = process.env.INTERCOM_ACCESS_TOKEN
-  const helpArticles = intercomToken
-    ? await searchHelpCenter(turns.at(-1)!.text, intercomToken)
-    : []
-  const systemInstructionText = buildSystemPrompt(formatHelpResults(helpArticles))
+  const latestUserText = turns.at(-1)!.text
 
-  let upstream: Response
-  try {
-    upstream = await fetch(
-      `${ENDPOINT}/${MODEL}:streamGenerateContent?alt=sse`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstructionText }] },
-          contents: turns.map((t) => ({
-            role: t.role,
-            parts: [{ text: t.text }],
-          })),
-          generationConfig: {
-            temperature: 0.6,
-            maxOutputTokens: 900,
-            // The 3.x flash models "think" by default, spending part of
-            // maxOutputTokens on hidden reasoning before any visible text,
-            // which was silently truncating replies. This assistant only
-            // needs a short, direct answer, so thinking is switched off.
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        }),
-      }
-    )
-  } catch {
-    return new Response("Could not reach the model.", { status: 502 })
-  }
-
-  if (!upstream.ok || !upstream.body) {
-    const detail = await upstream.text().catch(() => "")
-    console.error(
-      `[chat] Gemini ${upstream.status}: ${detail.slice(0, 400)}`
-    )
-    // Fall back rather than showing a dead box to a homepage visitor.
-    const isFollowUp = turns.filter((t) => t.role === "user").length > 1
-    const reply = demoReply(turns.at(-1)!.text, isFollowUp)
-    logIfPossible(reply, "demo")
-    return new Response(textStream(chunk(reply)), {
-      headers: {
-        "content-type": "text/plain; charset=utf-8",
-        "x-formaloo-mode": "demo",
-        "x-formaloo-reason": `upstream-${upstream.status}`,
-      },
-    })
-  }
-
-  // Unwrap Gemini's SSE into a plain text stream for the client, accumulating
-  // the full reply so it can be logged once streaming finishes.
   let fullText = ""
+  let loggedModel = "demo"
   let resolveStreamDone: () => void
   const streamDone = new Promise<void>((resolve) => {
     resolveStreamDone = resolve
@@ -203,12 +155,87 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const reader = upstream.body!.getReader()
-      const decoder = new TextDecoder()
       const encoder = new TextEncoder()
-      let buffer = ""
+      const emit = (text: string) => controller.enqueue(encoder.encode(text))
+
+      async function fallbackToDemo(reason: string) {
+        loggedModel = "demo"
+        emit(metaMarker({ type: "mode", mode: "demo", reason }))
+        const reply = demoReply(latestUserText, isFollowUp)
+        fullText = reply
+        for (const piece of chunk(reply)) {
+          emit(piece)
+          await new Promise((r) => setTimeout(r, 14))
+        }
+      }
 
       try {
+        // Live, real-time search against the actual Intercom help center —
+        // never RAG, never re-indexed, so it can never go stale the way a
+        // pre-embedded copy would. Gracefully empty if the token isn't
+        // configured or the search itself fails; the model is told exactly
+        // what to do with an empty result (fall back to normal routing).
+        let helpArticles: Awaited<ReturnType<typeof searchHelpCenter>> = []
+        if (intercomToken) {
+          emit(metaMarker({ type: "search", phase: "start", query: latestUserText }))
+          helpArticles = await searchHelpCenter(latestUserText, intercomToken)
+          emit(metaMarker({ type: "search", phase: "done", count: helpArticles.length }))
+        }
+
+        const systemInstructionText = buildSystemPrompt(
+          formatHelpResults(helpArticles)
+        )
+
+        let upstream: Response
+        try {
+          upstream = await fetch(
+            `${ENDPOINT}/${MODEL}:streamGenerateContent?alt=sse`,
+            {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "x-goog-api-key": apiKey,
+              },
+              body: JSON.stringify({
+                systemInstruction: { parts: [{ text: systemInstructionText }] },
+                contents: turns.map((t) => ({
+                  role: t.role,
+                  parts: [{ text: t.text }],
+                })),
+                generationConfig: {
+                  temperature: 0.6,
+                  maxOutputTokens: 900,
+                  // The 3.x flash models "think" by default, spending part of
+                  // maxOutputTokens on hidden reasoning before any visible
+                  // text, which was silently truncating replies. This
+                  // assistant only needs a short, direct answer, so thinking
+                  // is switched off.
+                  thinkingConfig: { thinkingBudget: 0 },
+                },
+              }),
+            }
+          )
+        } catch {
+          await fallbackToDemo("network")
+          return
+        }
+
+        if (!upstream.ok || !upstream.body) {
+          const detail = await upstream.text().catch(() => "")
+          console.error(`[chat] Gemini ${upstream.status}: ${detail.slice(0, 400)}`)
+          await fallbackToDemo(`upstream-${upstream.status}`)
+          return
+        }
+
+        loggedModel = MODEL
+        emit(metaMarker({ type: "mode", mode: "live" }))
+
+        // Unwrap Gemini's SSE into plain text, accumulating the full reply
+        // so it can be logged once streaming finishes.
+        const reader = upstream.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ""
+
         for (;;) {
           const { done, value } = await reader.read()
           if (done) break
@@ -228,7 +255,7 @@ export async function POST(req: NextRequest) {
               for (const part of parts) {
                 if (typeof part?.text === "string" && part.text) {
                   fullText += part.text
-                  controller.enqueue(encoder.encode(part.text))
+                  emit(part.text)
                 }
               }
             } catch {
@@ -254,7 +281,7 @@ export async function POST(req: NextRequest) {
         conversationId,
         turns: [...turns, { role: "model", text }],
         cta,
-        model: MODEL,
+        model: loggedModel,
         geminiApiKey: apiKey,
       })
     })
@@ -263,7 +290,6 @@ export async function POST(req: NextRequest) {
   return new Response(stream, {
     headers: {
       "content-type": "text/plain; charset=utf-8",
-      "x-formaloo-mode": "live",
       "cache-control": "no-store",
     },
   })

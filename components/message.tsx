@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, Copy } from "lucide-react"
+import { Check, Copy, Search } from "lucide-react"
 
 import { Logo, type LogoState } from "@/components/brand/logo"
 import { CtaCard } from "@/components/cta-card"
@@ -281,12 +281,47 @@ function RichText({ text }: { text: string }) {
   )
 }
 
+/**
+ * Real-time visibility into the live Intercom help-center search that runs
+ * before v1 answers (see lib/parse-meta.ts + app/api/chat/route.ts). Absent
+ * entirely on v2, whose route never emits these markers.
+ */
+export type SearchStatus =
+  | { phase: "start"; query: string }
+  | { phase: "done"; count: number }
+
 export type ChatMessage = {
   id: string
   role: "user" | "model"
   text: string
   cta: Cta | null
   failed?: boolean
+  search?: SearchStatus | null
+}
+
+function truncate(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text
+}
+
+function SearchStatusPill({ status }: { status: SearchStatus }) {
+  const label =
+    status.phase === "start"
+      ? `Searching the help center for "${truncate(status.query, 60)}"`
+      : status.count > 0
+        ? `Found ${status.count} related help ${status.count === 1 ? "article" : "articles"}`
+        : "No matching help articles found"
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 py-2.5 text-[0.85rem] text-muted-foreground"
+      role="status"
+    >
+      <Search
+        className={cn("size-3.5 shrink-0", status.phase === "start" && "animate-pulse")}
+      />
+      {label}
+    </span>
+  )
 }
 
 export function Message({
@@ -345,23 +380,28 @@ export function Message({
           )}
         >
           <RichText text={message.text} />
-          {streaming && !message.text && (
-            <span
-              className="inline-flex items-end gap-1 py-2.5"
-              role="status"
-              aria-label="Thinking"
-            >
-              {[0, 1, 2].map((i) => (
-                <span
-                  key={i}
-                  className="size-1.5 rounded-full bg-muted-foreground"
-                  style={{
-                    animation: "thinking-dot 1.1s ease-in-out infinite",
-                    animationDelay: `${i * 150}ms`,
-                  }}
-                />
-              ))}
-            </span>
+          {streaming && !message.text && message.search ? (
+            <SearchStatusPill status={message.search} />
+          ) : (
+            streaming &&
+            !message.text && (
+              <span
+                className="inline-flex items-end gap-1 py-2.5"
+                role="status"
+                aria-label="Thinking"
+              >
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="size-1.5 rounded-full bg-muted-foreground"
+                    style={{
+                      animation: "thinking-dot 1.1s ease-in-out infinite",
+                      animationDelay: `${i * 150}ms`,
+                    }}
+                  />
+                ))}
+              </span>
+            )
           )}
         </div>
         {message.cta && <CtaCard cta={message.cta} />}
