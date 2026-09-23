@@ -46,7 +46,26 @@ Authentication, with **Articles: Read** permission. Server-side only.
 Without it, this step is skipped entirely and v1 falls straight through to
 normal Path A/B routing, nothing breaks, it just can't answer "how does X
 already work" questions from real docs. See `lib/intercom-search.ts` and the
-"PRODUCT QUESTIONS — HELP CENTER FIRST" section of `lib/system-prompt.ts`.
+"HELP CENTER GROUNDING" section of `lib/system-prompt.ts`.
+
+Grounding applies on every turn, not only "how does X work" questions.
+Build-intent messages (Path A/B) read the search results too: if a real
+article is genuinely relevant (a Magic Create how-to, a matching template),
+Path A's final step becomes an actual cited walkthrough instead of the
+generic "sign up, paste, click Create" line. If nothing above is relevant,
+it falls back to the generic line rather than inventing steps.
+
+The search runs live, inside the response stream itself, not before it
+opens, so the visitor sees it happening: `lib/parse-meta.ts` defines a
+server-emitted `<<<META {...}>>>` sentinel family (separate from the
+model-emitted `<<<CTA ...>>>` in `parse-cta.ts`, so the two prefixes can
+never collide) for search-start / search-done / live-vs-demo-mode events.
+`components/message.tsx` renders a transient status pill while it's
+in flight ("Searching the help center for '...'" -> "Found N related
+articles"), then a **persistent "Sources" list** of clickable link chips
+once results come back, real Intercom URLs, opens in a new tab, stays for
+the life of the message the same way the CTA card does (it doesn't disappear
+once the reply text starts streaming in, unlike the transient pill).
 
 ## Chat log (Supabase)
 
@@ -136,6 +155,7 @@ known small rough edge, cosmetic only.
 | `lib/chat-log.ts` | Outcome + Gemini topic/description, Supabase upsert |
 | `lib/supabase-admin.ts` | Server-only Supabase client (service_role) |
 | `lib/intercom-search.ts` | Live Intercom Articles search, formatted for the prompt |
+| `lib/parse-meta.ts` | Server-emitted `<<<META>>>` events: search status, live/demo mode |
 | `app/v2/page.tsx` | V2 comparison page, same UI pointed at `/api/chat-v2` |
 | `app/api/chat-v2/route.ts` | Vertex AI proxy for the Agent Builder comparison |
 | `lib/vertex-agent-prompt.ts` | Alisina's Agent Builder instruction, verbatim |
