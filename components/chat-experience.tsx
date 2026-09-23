@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { AlertTriangle, RotateCcw } from "lucide-react"
+import { AlertTriangle, Mail, RotateCcw, Workflow } from "lucide-react"
 
 import { Message, type ChatMessage, type SearchStatus } from "@/components/message"
 import { PromptBox } from "@/components/prompt-box"
@@ -11,6 +11,23 @@ import { cn } from "@/lib/utils"
 
 let idCounter = 0
 const nextId = () => `m${++idCounter}`
+
+// One-click starters shown on the empty state, before the visitor types
+// anything — one per build path, so both Path A (a plain form) and Path B
+// (a multi-role system) are a click away to try. Shared by v1 and v2 since
+// both render this same component.
+const SUGGESTIONS = [
+  {
+    icon: Mail,
+    label: "Contact us form",
+    prompt: "How do I build a contact us form?",
+  },
+  {
+    icon: Workflow,
+    label: "School workflow approval system",
+    prompt: "How do I build a school workflow approval system?",
+  },
+] as const
 
 export function ChatExperience({
   apiPath = "/api/chat",
@@ -245,8 +262,28 @@ export function ChatExperience({
           />
 
           {!started && (
+            <div
+              className="animate-fade-in mt-5 flex flex-wrap items-center justify-center gap-2"
+              style={{ animationDelay: "210ms" }}
+            >
+              {SUGGESTIONS.map(({ icon: Icon, label, prompt }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => send(prompt)}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <Icon className="size-3.5 text-muted-foreground" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {!started && (
             <dl
-              className="animate-fade-in mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-center"
+              className="animate-fade-in mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-center"
               style={{ animationDelay: "260ms" }}
             >
               {[
