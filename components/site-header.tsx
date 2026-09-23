@@ -59,7 +59,12 @@ function MegaPanel({ item }: { item: Extract<NavItem, { groups: object }> }) {
   )
 }
 
-export function SiteHeader() {
+export function SiteHeader({
+  topOffset = false,
+}: {
+  /** Shifts the header down below a fixed version banner (comparison pages). */
+  topOffset?: boolean
+} = {}) {
   const [openIndex, setOpenIndex] = React.useState<number | null>(null)
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [mobileSection, setMobileSection] = React.useState<string | null>(null)
@@ -95,7 +100,12 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="absolute inset-x-0 top-0 z-50">
+    <header
+      className={cn(
+        "absolute inset-x-0 z-50",
+        topOffset ? "top-9" : "top-0"
+      )}
+    >
       <div
         className="relative"
         onMouseLeave={scheduleClose}

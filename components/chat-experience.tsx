@@ -11,7 +11,12 @@ import { cn } from "@/lib/utils"
 let idCounter = 0
 const nextId = () => `m${++idCounter}`
 
-export function ChatExperience() {
+export function ChatExperience({
+  apiPath = "/api/chat",
+}: {
+  /** Which backend this instance talks to — lets /v2 point at a different route. */
+  apiPath?: string
+} = {}) {
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
   const [input, setInput] = React.useState("")
   const [busy, setBusy] = React.useState(false)
@@ -69,7 +74,7 @@ export function ChatExperience() {
       abortRef.current = controller
 
       try {
-        const response = await fetch("/api/chat", {
+        const response = await fetch(apiPath, {
           method: "POST",
           headers: { "content-type": "application/json" },
           signal: controller.signal,
