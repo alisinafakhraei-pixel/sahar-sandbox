@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, Copy, Search } from "lucide-react"
+import { Check, Copy, ExternalLink, Search } from "lucide-react"
 
 import { Logo, type LogoState } from "@/components/brand/logo"
 import { CtaCard } from "@/components/cta-card"
@@ -288,7 +288,7 @@ function RichText({ text }: { text: string }) {
  */
 export type SearchStatus =
   | { phase: "start"; query: string }
-  | { phase: "done"; count: number }
+  | { phase: "done"; count: number; articles: { title: string; url: string }[] }
 
 export type ChatMessage = {
   id: string
@@ -321,6 +321,41 @@ function SearchStatusPill({ status }: { status: SearchStatus }) {
       />
       {label}
     </span>
+  )
+}
+
+/**
+ * Renders the actual articles the live Intercom search found, as open-able
+ * links — not just "found 3 articles," the visitor can read them directly.
+ * Unlike SearchStatusPill (which only shows while streaming, before any
+ * reply text), this renders for the life of the message: `message.search`
+ * keeps its "done" value after streaming ends (see chat-experience.tsx),
+ * so this persists exactly like the CTA card does.
+ */
+function SourcesList({ articles }: { articles: { title: string; url: string }[] }) {
+  if (articles.length === 0) return null
+
+  return (
+    <div className="animate-rise-in mt-3">
+      <p className="mb-1.5 text-[0.7rem] font-semibold tracking-wide text-muted-foreground uppercase">
+        Sources
+      </p>
+      <ul className="flex flex-wrap gap-1.5">
+        {articles.map((a) => (
+          <li key={a.url}>
+            <a
+              href={a.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex max-w-[280px] items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[0.8rem] font-medium text-foreground/80 transition-colors hover:border-foreground/20 hover:text-foreground"
+            >
+              <span className="truncate">{a.title}</span>
+              <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -404,6 +439,9 @@ export function Message({
             )
           )}
         </div>
+        {message.search?.phase === "done" && (
+          <SourcesList articles={message.search.articles} />
+        )}
         {message.cta && <CtaCard cta={message.cta} />}
       </div>
     </div>

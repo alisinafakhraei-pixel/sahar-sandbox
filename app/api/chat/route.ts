@@ -179,7 +179,17 @@ export async function POST(req: NextRequest) {
         if (intercomToken) {
           emit(metaMarker({ type: "search", phase: "start", query: latestUserText }))
           helpArticles = await searchHelpCenter(latestUserText, intercomToken)
-          emit(metaMarker({ type: "search", phase: "done", count: helpArticles.length }))
+          emit(
+            metaMarker({
+              type: "search",
+              phase: "done",
+              count: helpArticles.length,
+              // Title + URL only — the description isn't needed client-side,
+              // and keeping the marker small matters since it's sent before
+              // any visible reply text.
+              articles: helpArticles.map((a) => ({ title: a.title, url: a.url })),
+            })
+          )
         }
 
         const systemInstructionText = buildSystemPrompt(

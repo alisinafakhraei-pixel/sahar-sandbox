@@ -11,9 +11,11 @@
  * the front of the string.
  */
 
+export type MetaArticle = { title: string; url: string }
+
 export type MetaEvent =
   | { type: "search"; phase: "start"; query: string }
-  | { type: "search"; phase: "done"; count: number }
+  | { type: "search"; phase: "done"; count: number; articles: MetaArticle[] }
   | { type: "mode"; mode: "live" | "demo"; reason?: string }
 
 export const META_OPEN = "<<<META"
@@ -29,7 +31,19 @@ function isMetaEvent(value: unknown): value is MetaEvent {
 
   if (v.type === "search") {
     if (v.phase === "start") return typeof v.query === "string"
-    if (v.phase === "done") return typeof v.count === "number"
+    if (v.phase === "done") {
+      return (
+        typeof v.count === "number" &&
+        Array.isArray(v.articles) &&
+        v.articles.every(
+          (a) =>
+            typeof a === "object" &&
+            a !== null &&
+            typeof (a as Record<string, unknown>).title === "string" &&
+            typeof (a as Record<string, unknown>).url === "string"
+        )
+      )
+    }
     return false
   }
   if (v.type === "mode") {

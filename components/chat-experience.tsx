@@ -128,7 +128,7 @@ export function ChatExperience({
               search =
                 evt.phase === "start"
                   ? { phase: "start", query: evt.query }
-                  : { phase: "done", count: evt.count }
+                  : { phase: "done", count: evt.count, articles: evt.articles }
             } else if (evt.type === "mode" && evt.mode === "demo") {
               setDemoReason(evt.reason ?? "unknown")
             }
