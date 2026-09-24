@@ -1,0 +1,100 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f4f3f1;
+  color: #1f2023;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header {
+  padding: 12px 16px;
+  background: #5b21b6;
+  color: white;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+header .muted {
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bubble {
+  max-width: 640px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.bubble.user {
+  align-self: flex-end;
+  background: #1f2023;
+  color: white;
+}
+
+.bubble.model {
+  align-self: flex-start;
+  background: white;
+  border: 1px solid #e3e1dd;
+}
+
+.bubble .cta {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #1f2023;
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+#composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e3e1dd;
+  background: white;
+}
+
+#input {
+  flex: 1;
+  resize: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cfccc6;
+  font: inherit;
+}
+
+#send {
+  padding: 0 18px;
+  border: none;
+  border-radius: 10px;
+  background: #5b21b6;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#send:disabled,
+#input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

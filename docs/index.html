@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sahar Sandbox — Formaloo OI chat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <strong>Sahar Sandbox</strong>
+    <span class="muted">Formaloo OI chat — direct Gemini call, static GitHub Pages build</span>
+  </header>
+
+  <main id="messages" aria-live="polite"></main>
+
+  <form id="composer">
+    <textarea id="input" rows="2" placeholder="Describe what you want to build…" autofocus></textarea>
+    <button id="send" type="submit">Send</button>
+  </form>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
