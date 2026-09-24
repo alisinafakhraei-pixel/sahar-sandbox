@@ -8,7 +8,7 @@ export default function Page() {
     <>
       <VersionBanner
         version={1}
-        description="Direct Gemini API call + Intercom API — the original build"
+        description="Sahar Sandbox — Direct Gemini API call + Intercom API"
         otherHref="/v2"
         otherLabel="Try Version 2"
       />

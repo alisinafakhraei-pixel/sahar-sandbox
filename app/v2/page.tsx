@@ -8,7 +8,7 @@ export default function V2Page() {
     <>
       <VersionBanner
         version={2}
-        description="Vertex AI Agent Builder — Gemini 3.5 Flash + Google Search + URL Context"
+        description="Sahar Sandbox — Vertex AI Agent Builder, Gemini 3.5 Flash"
         otherHref="/"
         otherLabel="Back to Version 1"
       />
